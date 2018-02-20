@@ -18,7 +18,16 @@ let eraseBuffer = (buffer) => {
 	buffer.U = 0.0;
 };
 
+eraseBuffer(buffer);
+
+let bufferedToAverage = (buffer) => {
+	buffer.T /= sampleSize;
+	buffer.L /= sampleSize;
+	buffer.U /= sampleSize;
+}
+
 processData.on('processed', () => {
+	bufferedToAverage(buffer);
 	eraseBuffer(buffer);
 	// TODO save data
 });
@@ -26,15 +35,16 @@ processData.on('processed', () => {
 parser.on('data', (data) => {
 	let parsedData = JSON.parse(data);
 
+	console.log('received: ', parsedData);
+
 	buffer.T += parsedData.T;
 	buffer.U += parsedData.U;
 	buffer.L += parsedData.L;
 
-	if (numberOfReads++ >= sampleSize) {
+	if (++numberOfReads >= sampleSize) {
+		numberOfReads = 0;
 		processData.emit("processed");
-	}
-
-	console.log(numberOfReads);
+	} 
 });
 
 port.open((err) => {
