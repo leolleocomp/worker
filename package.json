@@ -9,7 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "moment": "^2.20.1",
     "promise": "^8.0.1",
+    "redis": "^2.8.0",
     "serialport": "^6.0.5"
   }
 }
