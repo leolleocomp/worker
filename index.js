@@ -18,8 +18,10 @@ client.on('error', (err) => {
 });
 
 let numberOfReads = 0;
-let sampleSize = 10;
+let sampleSize = 1;
 let buffer = {};
+
+buffer.T = buffer.L = buffer.U = 0.0;
 
 let bufferedToAverage = (buffer) => {
 	buffer.T /= sampleSize;
@@ -27,36 +29,27 @@ let bufferedToAverage = (buffer) => {
 	buffer.U /= sampleSize;
 };
 
-let eraseBuffer = (buffer) => {
-	buffer.T = 0.0;
-	buffer.L = 0.0;
-	buffer.U = 0.0;
+let publishBuffer = (client, channel, buffer, variable) => {
+    return client.publish(channel, JSON.stringify({x: buffer.date, y: buffer[variable]}));
 };
 
+
 processData.on('processed', () => {
+    console.log('processed...', buffer);
+
 	bufferedToAverage(buffer);
 	buffer.date = moment().unix().toString();
 
 	let zaddAsync = promisify(client.zadd).bind(client);
-	let msg = { name: buffer.date, value: buffer.T };
+	let msg = { x: buffer.date, y: buffer.T };
 
-	zaddAsync('history:temperature', buffer.date, buffer.T)
-		.then(data => client.publish('history:temperature', JSON.stringify(msg)))
-		.catch(error => console.error(error));
+    console.log('publishing...', buffer);
 
-	msg.value = buffer.L;
+    publishBuffer(client, 'history:temperature', buffer, 'T');
+    publishBuffer(client, 'history:luminancy', buffer, 'L');
+    publishBuffer(client, 'history:umidity', buffer, 'U');
 
-	zaddAsync('history:luminancy', buffer.date, buffer.L)
-		.then(data => client.publish('history:luminosity', JSON.stringify(msg)))
-		.catch(error => console.error(error));
-
-	msg.value = buffer.U;
-
-	zaddAsync('history:umidity', buffer.date, buffer.L)
-		.then(data => client.publish('history:umidity', JSON.stringify(msg)))
-		.catch(error => console.error(error));
-
-	eraseBuffer(buffer);
+    buffer.T = buffer.L = buffer.U = 0.0;
 });
 
 parser.on('data', (data) => {
